@@ -348,3 +348,152 @@ if 'egitilmis_modeller' in st.session_state:
         )
 
         st.success("✅ SHAP analizi tamamlandı!")
+
+
+# ─────────────────────────────────────────
+# ADIM 6: MODEL KARŞILAŞTIRMA
+# ─────────────────────────────────────────
+if 'egitilmis_modeller' in st.session_state:
+    st.header("6. Model Karşılaştırma")
+
+    from sklearn.linear_model import Ridge
+    from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor, ExtraTreesRegressor
+    from sklearn.metrics import mean_absolute_error, r2_score
+    from sklearn.base import clone
+    from xgboost import XGBRegressor
+    from lightgbm import LGBMRegressor
+
+    X_train = st.session_state['X_train']
+    X_val   = st.session_state['X_val']
+    X_test  = st.session_state['X_test']
+    y_train = st.session_state['y_train']
+    y_val   = st.session_state['y_val']
+    y_test  = st.session_state['y_test']
+
+    tum_modeller = {
+        "Ridge":            Ridge(),
+        "Random Forest":    RandomForestRegressor(n_estimators=100, max_depth=10, min_samples_leaf=5, random_state=42),
+        "Gradient Boosting":GradientBoostingRegressor(random_state=42),
+        "Extra Trees":      ExtraTreesRegressor(n_estimators=100, random_state=42),
+        "XGBoost":          XGBRegressor(random_state=42, verbosity=0),
+        "LightGBM":         LGBMRegressor(random_state=42, verbose=-1),
+    }
+
+    karsilastir_hedef = st.selectbox(
+        "Karşılaştırma için hedef seç",
+        options=y_test.columns.tolist(),
+        key="karsilastir_hedef"
+    )
+
+    if st.button("🔍 Tüm Modelleri Karşılaştır"):
+        karsilastir_sonuc = []
+        progress = st.progress(0)
+
+        for i, (isim, model) in enumerate(tum_modeller.items()):
+            m = clone(model)
+            m.fit(X_train, y_train[karsilastir_hedef])
+
+            y_val_pred  = m.predict(X_val)
+            y_test_pred = m.predict(X_test)
+
+            karsilastir_sonuc.append({
+                "Model":    isim,
+                "Val R²":   round(r2_score(y_val[karsilastir_hedef], y_val_pred), 4),
+                "Test R²":  round(r2_score(y_test[karsilastir_hedef], y_test_pred), 4),
+                "Val MAE":  round(mean_absolute_error(y_val[karsilastir_hedef], y_val_pred), 4),
+                "Test MAE": round(mean_absolute_error(y_test[karsilastir_hedef], y_test_pred), 4),
+            })
+            progress.progress((i + 1) / len(tum_modeller))
+
+        kar_df = pd.DataFrame(karsilastir_sonuc).sort_values("Test R²", ascending=False)
+        st.session_state['kar_df'] = kar_df
+        st.success("✅ Karşılaştırma tamamlandı!")
+        st.dataframe(kar_df)
+
+        # Grafik
+        fig, ax = plt.subplots(figsize=(10, 5))
+        ax.bar(kar_df['Model'], kar_df['Test R²'], color='steelblue')
+        ax.set_ylabel("Test R²")
+        ax.set_title(f"Model Karşılaştırma — {karsilastir_hedef}")
+        ax.set_ylim(0, 1)
+        plt.xticks(rotation=15)
+        st.pyplot(fig)
+        plt.close()
+
+        en_iyi = kar_df.iloc[0]['Model']
+        st.info(f"🏆 En iyi model: **{en_iyi}** (Test R² = {kar_df.iloc[0]['Test R²']})")
+
+# ─────────────────────────────────────────
+# ADIM 7: TAHMİN SAYFASI
+# ─────────────────────────────────────────
+if 'egitilmis_modeller' in st.session_state:
+    st.header("7. Yeni Veri Tahmini")
+
+    egitilmis_modeller = st.session_state['egitilmis_modeller']
+    X                  = st.session_state['X']
+
+    st.info("Aşağıya yeni verinin değerlerini gir, tüm hedefler için tahmin yapılacak.")
+
+    # Her feature için input
+    yeni_veri = {}
+    cols = st.columns(3)
+
+    for i, feat in enumerate(X.columns):
+        with cols[i % 3]:
+            val = st.number_input(
+                feat,
+                value=float(X[feat].mean()),
+                key=f"input_{feat}"
+            )
+            yeni_veri[feat] = val
+
+    if st.button("🎯 Tahmin Et"):
+        yeni_df = pd.DataFrame([yeni_veri])
+        tahmin_sonuc = []
+
+        for hedef, model in egitilmis_modeller.items():
+            tahmin = model.predict(yeni_df)[0]
+            tahmin_sonuc.append({
+                "Hedef":   hedef,
+                "Tahmin":  round(float(tahmin), 4)
+            })
+
+        tahmin_df = pd.DataFrame(tahmin_sonuc)
+        st.session_state['tahmin_df'] = tahmin_df
+        st.success("✅ Tahmin tamamlandı!")
+        st.dataframe(tahmin_df)
+
+# ─────────────────────────────────────────
+# ADIM 8: RAPOR İNDİR
+# ─────────────────────────────────────────
+if 'sonuc_df' in st.session_state:
+    st.header("8. Rapor İndir")
+
+    rapor_parcalar = []
+
+    if 'sonuc_df' in st.session_state:
+        rapor_parcalar.append("## Model Eğitim Sonuçları\n")
+        rapor_parcalar.append(st.session_state['sonuc_df'].to_csv(index=False))
+
+    if 'kar_df' in st.session_state:
+        rapor_parcalar.append("\n## Model Karşılaştırma\n")
+        rapor_parcalar.append(st.session_state['kar_df'].to_csv(index=False))
+
+    if 'importance' in st.session_state:
+        rapor_parcalar.append("\n## Feature Importance\n")
+        rapor_parcalar.append(st.session_state['importance'].to_csv(index=False))
+
+    if 'tahmin_df' in st.session_state:
+        rapor_parcalar.append("\n## Tahmin Sonuçları\n")
+        rapor_parcalar.append(st.session_state['tahmin_df'].to_csv(index=False))
+
+    rapor_txt = "\n".join(rapor_parcalar)
+
+    st.download_button(
+        label="📥 Tam Raporu İndir (CSV)",
+        data=rapor_txt.encode('utf-8'),
+        file_name="ml_pipeline_rapor.csv",
+        mime="text/csv"
+    )
+
+    st.success("✅ Rapor hazır!")
