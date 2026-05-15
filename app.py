@@ -205,36 +205,34 @@ if 'X' in st.session_state:
 
     progress = st.progress(0)
 
-        for i, hedef in enumerate(y.columns):
-            model = model_secenekleri[secilen_model]
-            
-            # Her hedef için fresh model
-            from sklearn.base import clone
-            m = clone(model)
-            
-            m.fit(X_train, y_train[hedef])
-            y_pred = m.predict(X_test)
+    for i, hedef in enumerate(y.columns):
+        model = model_secenekleri[secilen_model]
+        
+        from sklearn.base import clone
+        m = clone(model)
+        m.fit(X_train, y_train[hedef])
+        y_pred = m.predict(X_test)
 
-            mae = mean_absolute_error(y_test[hedef], y_pred)
-            r2  = r2_score(y_test[hedef], y_pred)
-            cv  = cross_val_score(m, X, y[hedef], cv=5, scoring='r2').mean()
+        mae = mean_absolute_error(y_test[hedef], y_pred)
+        r2  = r2_score(y_test[hedef], y_pred)
+        cv  = cross_val_score(m, X, y[hedef], cv=5, scoring='r2').mean()
 
             # Validation skoru
-            y_val_pred = m.predict(X_val)
-            mae_val = mean_absolute_error(y_val[hedef], y_val_pred)
-            r2_val  = r2_score(y_val[hedef], y_val_pred)
+        y_val_pred = m.predict(X_val)
+        mae_val = mean_absolute_error(y_val[hedef], y_val_pred)
+        r2_val  = r2_score(y_val[hedef], y_val_pred)
 
-            sonuclar.append({
-            "Hedef": hedef,
-            "Train R²": round(r2_score(y_train[hedef], m.predict(X_train)), 4),
-            "Val R²":   round(r2_val, 4),
-            "Test R²":  round(r2, 4),
-            "Val MAE":  round(mae_val, 4),
-            "Test MAE": round(mae, 4),
-            "CV R²":    round(cv, 4)})
+        sonuclar.append({
+        "Hedef": hedef,
+        "Train R²": round(r2_score(y_train[hedef], m.predict(X_train)), 4),
+        "Val R²":   round(r2_val, 4),
+        "Test R²":  round(r2, 4),
+        "Val MAE":  round(mae_val, 4),
+        "Test MAE": round(mae, 4),
+        "CV R²":    round(cv, 4)})
 
-            egitilmis_modeller[hedef] = m
-            progress.progress((i + 1) / len(y.columns))
+        egitilmis_modeller[hedef] = m
+        progress.progress((i + 1) / len(y.columns))
 
         sonuc_df = pd.DataFrame(sonuclar)
 
