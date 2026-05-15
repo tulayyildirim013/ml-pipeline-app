@@ -169,7 +169,6 @@ if 'X' in st.session_state:
     from xgboost import XGBRegressor
     from lightgbm import LGBMRegressor
 
-    # Model seçimi
     model_secenekleri = {
         "Ridge": Ridge(),
         "Random Forest": RandomForestRegressor(n_estimators=100, random_state=42),
@@ -179,58 +178,62 @@ if 'X' in st.session_state:
         "LightGBM": LGBMRegressor(random_state=42, verbose=-1),
     }
 
-    secilen_modeller = st.multiselect(
-        "Hangi modelleri denemek istiyorsun?",
-        options=list(model_secenekleri.keys()),
-        default=["Ridge", "Random Forest", "XGBoost"]
+    secilen_model = st.selectbox(
+        "Model seç",
+        options=list(model_secenekleri.keys())
     )
 
-    # Train/test split
     test_orani = st.slider("Test oranı", 0.10, 0.40, 0.20, 0.05)
 
-    # Hedef seç (birden fazla Y varsa)
-    if y.shape[1] > 1:
-        hedef = st.selectbox("Hangi hedef değişkeni eğitelim?", options=y.columns.tolist())
-        y_sec = y[hedef]
-    else:
-        y_sec = y.iloc[:, 0]
-        hedef = y.columns[0]
+    if st.button("🚀 Modeli Eğit"):
+        st.info(f"⏳ {secilen_model} ile 9 hedef için eğitim yapılıyor...")
 
-    if st.button("🚀 Modelleri Eğit"):
         X_train, X_test, y_train, y_test = train_test_split(
-            X, y_sec, test_size=test_orani, random_state=42
+            X, y, test_size=test_orani, random_state=42
         )
 
         sonuclar = []
+        egitilmis_modeller = {}
 
-        for isim in secilen_modeller:
-            model = model_secenekleri[isim]
-            model.fit(X_train, y_train)
-            y_pred = model.predict(X_test)
+        progress = st.progress(0)
 
-            mae = mean_absolute_error(y_test, y_pred)
-            r2  = r2_score(y_test, y_pred)
-            cv  = cross_val_score(model, X, y_sec, cv=5, scoring='r2').mean()
+        for i, hedef in enumerate(y.columns):
+            model = model_secenekleri[secilen_model]
+            
+            # Her hedef için fresh model
+            from sklearn.base import clone
+            m = clone(model)
+            
+            m.fit(X_train, y_train[hedef])
+            y_pred = m.predict(X_test)
+
+            mae = mean_absolute_error(y_test[hedef], y_pred)
+            r2  = r2_score(y_test[hedef], y_pred)
+            cv  = cross_val_score(m, X, y[hedef], cv=5, scoring='r2').mean()
 
             sonuclar.append({
-                "Model": isim,
+                "Hedef": hedef,
                 "MAE": round(mae, 4),
                 "R²": round(r2, 4),
                 "CV R² (5-fold)": round(cv, 4)
             })
 
-        sonuc_df = pd.DataFrame(sonuclar).sort_values("R²", ascending=False)
-        st.session_state['sonuc_df'] = sonuc_df
-        st.session_state['X_train'] = X_train
-        st.session_state['X_test']  = X_test
-        st.session_state['y_train'] = y_train
-        st.session_state['y_test']  = y_test
-        st.session_state['hedef']   = hedef
-        st.session_state['model_secenekleri'] = model_secenekleri
-        st.session_state['secilen_modeller']  = secilen_modeller
+            egitilmis_modeller[hedef] = m
+            progress.progress((i + 1) / len(y.columns))
+
+        sonuc_df = pd.DataFrame(sonuclar)
+
+        st.session_state['sonuc_df']          = sonuc_df
+        st.session_state['egitilmis_modeller'] = egitilmis_modeller
+        st.session_state['X_train']            = X_train
+        st.session_state['X_test']             = X_test
+        st.session_state['y_train']            = y_train
+        st.session_state['y_test']             = y_test
+        st.session_state['secilen_model']      = secilen_model
 
         st.success("✅ Eğitim tamamlandı!")
         st.dataframe(sonuc_df)
 
-        en_iyi = sonuc_df.iloc[0]['Model']
-        st.info(f"🏆 En iyi model: **{en_iyi}** (R² = {sonuc_df.iloc[0]['R²']})")
+        en_iyi = sonuc_df.loc[sonuc_df['R²'].idxmax(), 'Hedef']
+        en_iyi_r2 = sonuc_df['R²'].max()
+        st.info(f"🏆 En yüksek R²: **{en_iyi}** (R² = {en_iyi_r2})")
