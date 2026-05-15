@@ -252,3 +252,99 @@ if 'X' in st.session_state:
         en_iyi = sonuc_df.loc[sonuc_df['Test R²'].idxmax(), 'Hedef']
         en_iyi_r2 = sonuc_df['Test R²'].max()
         st.info(f"🏆 En yüksek R²: **{en_iyi}** (R² = {en_iyi_r2})")
+
+# ─────────────────────────────────────────
+# ADIM 5: SHAP ANALİZİ
+# ─────────────────────────────────────────
+if 'egitilmis_modeller' in st.session_state:
+    st.header("5. SHAP Analizi ve Feature Importance")
+
+    import shap
+    import matplotlib.pyplot as plt
+
+    egitilmis_modeller = st.session_state['egitilmis_modeller']
+    X_test             = st.session_state['X_test']
+    X_train            = st.session_state['X_train']
+
+    hedef_sec = st.selectbox(
+        "Hangi hedef için SHAP analizi?",
+        options=list(egitilmis_modeller.keys())
+    )
+
+    if st.button("📊 SHAP Analizi Yap"):
+        model = egitilmis_modeller[hedef_sec]
+
+        st.info("⏳ SHAP hesaplanıyor...")
+
+        # SHAP explainer
+        explainer   = shap.TreeExplainer(model)
+        shap_values = explainer.shap_values(X_test)
+
+        # ── 5.1 SHAP Summary Plot ──
+        st.subheader(f"5.1 SHAP Summary — {hedef_sec}")
+        fig1, ax1 = plt.subplots(figsize=(10, 6))
+        shap.summary_plot(shap_values, X_test, show=False)
+        st.pyplot(fig1)
+        plt.close()
+
+        # ── 5.2 Feature Importance ──
+        st.subheader(f"5.2 Feature Importance — {hedef_sec}")
+        importance = pd.DataFrame({
+            'Feature':    X_test.columns,
+            'Importance': abs(shap_values).mean(axis=0)
+        }).sort_values('Importance', ascending=False)
+
+        fig2, ax2 = plt.subplots(figsize=(10, 6))
+        ax2.barh(importance['Feature'][:15], importance['Importance'][:15])
+        ax2.set_xlabel("Ortalama |SHAP değeri|")
+        ax2.set_title(f"Top 15 Feature — {hedef_sec}")
+        ax2.invert_yaxis()
+        st.pyplot(fig2)
+        plt.close()
+
+        st.session_state['shap_values'] = shap_values
+        st.session_state['importance']  = importance
+        st.session_state['hedef_sec']   = hedef_sec
+
+        # ── 5.3 Eşik Değerleri ──
+        st.subheader("5.3 Feature Eşik Değerleri")
+        st.info("En önemli 10 feature için optimum aralıklar:")
+
+        esik_df = pd.DataFrame()
+        top10   = importance['Feature'].head(10).tolist()
+
+        for feat in top10:
+            q25 = X_train[feat].quantile(0.25)
+            q75 = X_train[feat].quantile(0.75)
+            esik_df = pd.concat([esik_df, pd.DataFrame([{
+                'Feature': feat,
+                'Min':     round(X_train[feat].min(), 4),
+                'Q25':     round(q25, 4),
+                'Medyan':  round(X_train[feat].median(), 4),
+                'Q75':     round(q75, 4),
+                'Max':     round(X_train[feat].max(), 4),
+            }])], ignore_index=True)
+
+        st.dataframe(esik_df)
+
+        # ── 5.4 PDF Rapor İndir ──
+        st.subheader("5.4 Raporu İndir")
+        
+        # CSV olarak indir
+        csv = importance.to_csv(index=False).encode('utf-8')
+        st.download_button(
+            label="📥 Feature Importance CSV İndir",
+            data=csv,
+            file_name=f"feature_importance_{hedef_sec}.csv",
+            mime="text/csv"
+        )
+
+        esik_csv = esik_df.to_csv(index=False).encode('utf-8')
+        st.download_button(
+            label="📥 Eşik Değerleri CSV İndir",
+            data=esik_csv,
+            file_name=f"esik_degerler_{hedef_sec}.csv",
+            mime="text/csv"
+        )
+
+        st.success("✅ SHAP analizi tamamlandı!")
