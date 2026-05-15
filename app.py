@@ -497,3 +497,124 @@ if 'sonuc_df' in st.session_state:
     )
 
     st.success("✅ Rapor hazır!")
+
+
+# ─────────────────────────────────────────
+# ADIM 9: INVERSE DESIGN
+# ─────────────────────────────────────────
+if 'egitilmis_modeller' in st.session_state:
+    st.header("9. Inverse Design (Ters Tasarım)")
+    st.info("Hedef performans değerlerini gir, en uygun alaşım bileşimi bulunacak.")
+
+    import optuna
+    optuna.logging.set_verbosity(optuna.logging.WARNING)
+
+    egitilmis_modeller = st.session_state['egitilmis_modeller']
+    X                  = st.session_state['X']
+
+    # ── Hedef değerler ──
+    st.subheader("9.1 Minimum Hedef Değerleri Gir")
+
+    hedef_limitler = {}
+    cols = st.columns(3)
+
+    for i, hedef in enumerate(egitilmis_modeller.keys()):
+        with cols[i % 3]:
+            aktif = st.checkbox(f"{hedef}", key=f"inv_{hedef}_aktif")
+            if aktif:
+                min_val = st.number_input(
+                    f"Min {hedef}",
+                    value=0.0,
+                    key=f"inv_{hedef}_min"
+                )
+                hedef_limitler[hedef] = min_val
+
+    # ── Feature sınırları ──
+    st.subheader("9.2 Feature Sınırları")
+    st.info("Arama aralığı: eğitim verisinin min-max değerleri kullanılacak.")
+
+    feature_sinirlar = {}
+    for feat in X.columns:
+        feature_sinirlar[feat] = (
+            float(X[feat].min()),
+            float(X[feat].max())
+        )
+
+    n_trials = st.slider("Optimizasyon denemesi", 100, 1000, 300, 100)
+
+    if hedef_limitler and st.button("🔍 Optimize Et"):
+        st.info(f"⏳ {n_trials} deneme ile optimizasyon yapılıyor...")
+
+        def objective(trial):
+            # Her feature için değer öner
+            x_dict = {}
+            for feat, (lo, hi) in feature_sinirlar.items():
+                if lo == hi:
+                    x_dict[feat] = lo
+                else:
+                    x_dict[feat] = trial.suggest_float(feat, lo, hi)
+
+            x_df = pd.DataFrame([x_dict])
+
+            # Her hedef için ceza hesapla
+            toplam_ceza = 0
+            for hedef, min_val in hedef_limitler.items():
+                tahmin = egitilmis_modeller[hedef].predict(x_df)[0]
+                if tahmin < min_val:
+                    toplam_ceza += (min_val - tahmin) ** 2
+
+            return toplam_ceza
+
+        study = optuna.create_study(direction='minimize')
+        study.optimize(objective, n_trials=n_trials)
+
+        # En iyi 5 sonuç
+        st.success("✅ Optimizasyon tamamlandı!")
+
+        en_iyi_params = study.best_params
+        en_iyi_df     = pd.DataFrame([en_iyi_params])
+
+        # Tahminleri göster
+        st.subheader("9.3 En İyi Alaşım Bileşimi")
+        st.dataframe(en_iyi_df)
+
+        st.subheader("9.4 Bu Bileşimin Tahmini Performansı")
+        performans = []
+        for hedef, model in egitilmis_modeller.items():
+            tahmin = model.predict(en_iyi_df)[0]
+            limit  = hedef_limitler.get(hedef, None)
+            durum  = ""
+            if limit is not None:
+                durum = "✅" if tahmin >= limit else "❌"
+            performans.append({
+                "Hedef":        hedef,
+                "Tahmin":       round(float(tahmin), 4),
+                "Min Hedef":    limit if limit else "-",
+                "Durum":        durum
+            })
+
+        perf_df = pd.DataFrame(performans)
+        st.dataframe(perf_df)
+
+        # Top 5 deneme
+        st.subheader("9.5 En İyi 5 Kombinasyon")
+        trials_df = study.trials_dataframe()
+        trials_df = trials_df.sort_values('value').head(5)
+        st.dataframe(trials_df)
+
+        # İndir
+        csv = en_iyi_df.to_csv(index=False).encode('utf-8')
+        st.download_button(
+            label="📥 En İyi Bileşimi İndir",
+            data=csv,
+            file_name="inverse_design_sonuc.csv",
+            mime="text/csv"
+        )
+
+        perf_csv = perf_df.to_csv(index=False).encode('utf-8')
+        st.download_button(
+            label="📥 Performans Tahminini İndir",
+            data=perf_csv,
+            file_name="inverse_design_performans.csv",
+            mime="text/csv"
+        )
