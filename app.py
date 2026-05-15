@@ -200,10 +200,10 @@ if 'X' in st.session_state:
     
     st.write(f"Train: {len(X_train)} | Val: {len(X_val)} | Test: {len(X_test)} satır")
 
-        sonuclar = []
-        egitilmis_modeller = {}
+    sonuclar = []
+    egitilmis_modeller = {}
 
-        progress = st.progress(0)
+    progress = st.progress(0)
 
         for i, hedef in enumerate(y.columns):
             model = model_secenekleri[secilen_model]
