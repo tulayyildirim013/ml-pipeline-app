@@ -183,14 +183,22 @@ if 'X' in st.session_state:
         options=list(model_secenekleri.keys())
     )
 
-    test_orani = st.slider("Test oranı", 0.10, 0.40, 0.20, 0.05)
+    st.info("📊 Veri bölünmesi: %70 Train | %15 Validation | %15 Test")
+    test_orani = 0.15
+    val_orani  = 0.15
 
     if st.button("🚀 Modeli Eğit"):
         st.info(f"⏳ {secilen_model} ile 9 hedef için eğitim yapılıyor...")
 
-        X_train, X_test, y_train, y_test = train_test_split(
-            X, y, test_size=test_orani, random_state=42
-        )
+        # Önce %15 test ayır
+    X_temp, X_test, y_temp, y_test = train_test_split(
+    X, y, test_size=0.15, random_state=42)
+    
+    # Kalanın %17.6'sı → toplam verinin %15'i validation olur
+    X_train, X_val, y_train, y_val = train_test_split(
+    X_temp, y_temp, test_size=0.176, random_state=42)
+    
+    st.write(f"Train: {len(X_train)} | Val: {len(X_val)} | Test: {len(X_test)} satır")
 
         sonuclar = []
         egitilmis_modeller = {}
@@ -211,12 +219,19 @@ if 'X' in st.session_state:
             r2  = r2_score(y_test[hedef], y_pred)
             cv  = cross_val_score(m, X, y[hedef], cv=5, scoring='r2').mean()
 
+            # Validation skoru
+            y_val_pred = m.predict(X_val)
+            mae_val = mean_absolute_error(y_val[hedef], y_val_pred)
+            r2_val  = r2_score(y_val[hedef], y_val_pred)
+
             sonuclar.append({
-                "Hedef": hedef,
-                "MAE": round(mae, 4),
-                "R²": round(r2, 4),
-                "CV R² (5-fold)": round(cv, 4)
-            })
+            "Hedef": hedef,
+            "Train R²": round(r2_score(y_train[hedef], m.predict(X_train)), 4),
+            "Val R²":   round(r2_val, 4),
+            "Test R²":  round(r2, 4),
+            "Val MAE":  round(mae_val, 4),
+            "Test MAE": round(mae, 4),
+            "CV R²":    round(cv, 4)})
 
             egitilmis_modeller[hedef] = m
             progress.progress((i + 1) / len(y.columns))
@@ -229,6 +244,8 @@ if 'X' in st.session_state:
         st.session_state['X_test']             = X_test
         st.session_state['y_train']            = y_train
         st.session_state['y_test']             = y_test
+        st.session_state['X_val']              = X_val
+        st.session_state['y_val']              = y_val
         st.session_state['secilen_model']      = secilen_model
 
         st.success("✅ Eğitim tamamlandı!")
