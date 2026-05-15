@@ -151,3 +151,86 @@ if 'bagimsiz' in st.session_state:
         st.session_state['y'] = y
         st.success(f"✅ Preprocessing tamamlandı! {X.shape[0]} satır, {X.shape[1]} feature")
         st.dataframe(X.head())
+
+
+# ─────────────────────────────────────────
+# ADIM 4: MODEL SEÇİMİ VE EĞİTİMİ
+# ─────────────────────────────────────────
+if 'X' in st.session_state:
+    st.header("4. Model Seçimi ve Eğitimi")
+
+    X = st.session_state['X']
+    y = st.session_state['y']
+
+    from sklearn.model_selection import train_test_split, cross_val_score
+    from sklearn.linear_model import Ridge
+    from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor, ExtraTreesRegressor
+    from sklearn.metrics import mean_absolute_error, r2_score
+    from xgboost import XGBRegressor
+    from lightgbm import LGBMRegressor
+
+    # Model seçimi
+    model_secenekleri = {
+        "Ridge": Ridge(),
+        "Random Forest": RandomForestRegressor(n_estimators=100, random_state=42),
+        "Gradient Boosting": GradientBoostingRegressor(random_state=42),
+        "Extra Trees": ExtraTreesRegressor(n_estimators=100, random_state=42),
+        "XGBoost": XGBRegressor(random_state=42, verbosity=0),
+        "LightGBM": LGBMRegressor(random_state=42, verbose=-1),
+    }
+
+    secilen_modeller = st.multiselect(
+        "Hangi modelleri denemek istiyorsun?",
+        options=list(model_secenekleri.keys()),
+        default=["Ridge", "Random Forest", "XGBoost"]
+    )
+
+    # Train/test split
+    test_orani = st.slider("Test oranı", 0.10, 0.40, 0.20, 0.05)
+
+    # Hedef seç (birden fazla Y varsa)
+    if y.shape[1] > 1:
+        hedef = st.selectbox("Hangi hedef değişkeni eğitelim?", options=y.columns.tolist())
+        y_sec = y[hedef]
+    else:
+        y_sec = y.iloc[:, 0]
+        hedef = y.columns[0]
+
+    if st.button("🚀 Modelleri Eğit"):
+        X_train, X_test, y_train, y_test = train_test_split(
+            X, y_sec, test_size=test_orani, random_state=42
+        )
+
+        sonuclar = []
+
+        for isim in secilen_modeller:
+            model = model_secenekleri[isim]
+            model.fit(X_train, y_train)
+            y_pred = model.predict(X_test)
+
+            mae = mean_absolute_error(y_test, y_pred)
+            r2  = r2_score(y_test, y_pred)
+            cv  = cross_val_score(model, X, y_sec, cv=5, scoring='r2').mean()
+
+            sonuclar.append({
+                "Model": isim,
+                "MAE": round(mae, 4),
+                "R²": round(r2, 4),
+                "CV R² (5-fold)": round(cv, 4)
+            })
+
+        sonuc_df = pd.DataFrame(sonuclar).sort_values("R²", ascending=False)
+        st.session_state['sonuc_df'] = sonuc_df
+        st.session_state['X_train'] = X_train
+        st.session_state['X_test']  = X_test
+        st.session_state['y_train'] = y_train
+        st.session_state['y_test']  = y_test
+        st.session_state['hedef']   = hedef
+        st.session_state['model_secenekleri'] = model_secenekleri
+        st.session_state['secilen_modeller']  = secilen_modeller
+
+        st.success("✅ Eğitim tamamlandı!")
+        st.dataframe(sonuc_df)
+
+        en_iyi = sonuc_df.iloc[0]['Model']
+        st.info(f"🏆 En iyi model: **{en_iyi}** (R² = {sonuc_df.iloc[0]['R²']})")
