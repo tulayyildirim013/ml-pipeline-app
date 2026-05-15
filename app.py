@@ -249,6 +249,6 @@ if 'X' in st.session_state:
         st.success("✅ Eğitim tamamlandı!")
         st.dataframe(sonuc_df)
 
-        en_iyi = sonuc_df.loc[sonuc_df['R²'].idxmax(), 'Hedef']
-        en_iyi_r2 = sonuc_df['R²'].max()
+        en_iyi = sonuc_df.loc[sonuc_df['Test R²'].idxmax(), 'Hedef']
+        en_iyi_r2 = sonuc_df['Test R²'].max()
         st.info(f"🏆 En yüksek R²: **{en_iyi}** (R² = {en_iyi_r2})")
