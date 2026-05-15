@@ -84,6 +84,7 @@ if 'bagimsiz' in st.session_state:
         IQR = Q3 - Q1
         outlier_mask = ((X < Q1 - 1.5 * IQR) | (X > Q3 + 1.5 * IQR)).any(axis=1)
         st.info(f"📊 {outlier_mask.sum()} outlier satır tespit edildi")
+        st.dataframe(X[outlier_mask])
     elif outlier_yontem == "Z-Score":
         z = np.abs((X - X.mean()) / X.std())
         outlier_mask = (z > 3).any(axis=1)
