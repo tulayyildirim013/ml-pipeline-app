@@ -131,7 +131,7 @@ if 'bagimsiz' in st.session_state:
     corr_matrix = X.corr().abs()
     
     # Köşegeni sıfırla (kendisiyle korelasyon = 1.0, bunları alma)
-    np.fill_diagonal(corr_matrix.values, 0)
+    corr_matrix = corr_matrix * (1 - np.eye(len(corr_matrix)))
 
     # Eşik üzerindeki çiftleri bul
     yuksek_ciftler = []
