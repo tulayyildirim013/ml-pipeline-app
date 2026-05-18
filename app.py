@@ -133,7 +133,7 @@ if 'bagimsiz' in st.session_state:
     )
     yuksek_kor = [
         col for col in ust_ucgen.columns
-        if any(ust_ucgen[col] > esik)
+        if any(ust_ucgen[col] > esik) and any(ust_ucgen[col] < 1.0)
     ]
 
     if yuksek_kor:
