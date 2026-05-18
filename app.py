@@ -3,7 +3,8 @@ import pandas as pd
 import numpy as np
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
 from sklearn.impute import SimpleImputer
-
+import matplotlib.pyplot as plt
+import seaborn as sns
 st.title("🔬 ML Pipeline")
 
 # ─────────────────────────────────────────
