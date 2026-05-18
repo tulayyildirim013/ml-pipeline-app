@@ -146,6 +146,7 @@ if 'bagimsiz' in st.session_state:
         corr = X.corr().abs()
         # Eşik üzeri korelasyonlu sütunları bul
         esik_gorsel = st.slider("Görsel eşik", 0.50, 1.00, 0.70, 0.05, key="gorsel_esik")
+        st.metric(label="Seçilen Eşik", value=f"{esik_gorsel}")
 
         # Sadece yüksek korelasyonlu sütunları seç
         # Sadece yüksek korelasyonlu sütunları seç
