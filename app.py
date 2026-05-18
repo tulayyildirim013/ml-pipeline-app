@@ -176,7 +176,30 @@ if 'bagimsiz' in st.session_state:
         plt.close()
     else:
         st.info("Bu eşikte gösterilecek sütun yok, eşiği düşür.")
-        
+        # Grafik altına ekle
+st.subheader("İki Sütun Arasındaki Korelasyonu Sorgula")
+
+col1, col2 = st.columns(2)
+with col1:
+    sutun1 = st.selectbox("1. Sütun", options=X.columns.tolist(), key="kor_s1")
+with col2:
+    sutun2 = st.selectbox("2. Sütun", options=X.columns.tolist(), key="kor_s2")
+
+if sutun1 != sutun2:
+    deger = X[sutun1].corr(X[sutun2])
+    deger_abs = abs(deger)
+
+    if deger_abs > 0.90:
+        yorum = "🔴 Çok yüksek korelasyon — Leakage riski var!"
+    elif deger_abs > 0.70:
+        yorum = "🟠 Yüksek korelasyon — Dikkat et"
+    elif deger_abs > 0.50:
+        yorum = "🟡 Orta korelasyon — Normal"
+    else:
+        yorum = "🟢 Düşük korelasyon — Sorun yok"
+
+    st.metric(label=f"{sutun1} ↔ {sutun2}", value=f"{deger:.4f}")
+    st.info(yorum)
 
           
 
