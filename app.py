@@ -161,7 +161,7 @@ if 'bagimsiz' in st.session_state:
         fig, ax = plt.subplots(figsize=(12, 10))
         sns.heatmap(
             corr_filtre,
-            annot=True,
+            annot=False,
             fmt=".2f",
             cmap='coolwarm',
             ax=ax,
