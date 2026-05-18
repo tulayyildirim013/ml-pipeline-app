@@ -83,20 +83,44 @@ if 'bagimsiz' in st.session_state:
         Q3 = X.quantile(0.75)
         IQR = Q3 - Q1
         outlier_mask = ((X < Q1 - 1.5 * IQR) | (X > Q3 + 1.5 * IQR)).any(axis=1)
-        st.info(f"📊 {outlier_mask.sum()} outlier satır tespit edildi")
-        st.dataframe(X[outlier_mask])
+        outlier_detay = (X < Q1 - 1.5 * IQR) | (X > Q3 + 1.5 * IQR)
+
     elif outlier_yontem == "Z-Score":
         z = np.abs((X - X.mean()) / X.std())
         outlier_mask = (z > 3).any(axis=1)
-        st.info(f"📊 {outlier_mask.sum()} outlier satır tespit edildi")
+        outlier_detay = z > 3
+
     else:
-        outlier_mask = pd.Series([False] * len(X))
+        outlier_mask  = pd.Series([False] * len(X))
+        outlier_detay = pd.DataFrame(False, index=X.index, columns=X.columns)
+
+    if outlier_yontem != "Yok":
+        st.info(f"📊 {outlier_mask.sum()} outlier satır tespit edildi")
 
     if outlier_mask.sum() > 0:
+        # Kırmızı highlight
+        def highlight_outlier(row):
+            satir_idx = row.name
+            renkler = []
+            for col in X.columns:
+                if outlier_detay.loc[satir_idx, col]:
+                    renkler.append('background-color: #ff4b4b; color: white')
+                else:
+                    renkler.append('')
+            return renkler
+
+        outlier_satirlar = X[outlier_mask].copy()
+        st.dataframe(
+            outlier_satirlar.style.apply(highlight_outlier, axis=1)
+        )
+
         if st.checkbox("Outlier satırları sil"):
             X = X[~outlier_mask].reset_index(drop=True)
             y = y[~outlier_mask].reset_index(drop=True)
             st.success(f"✅ Silindi. Kalan satır: {len(X)}")
+           
+
+ 
 
     # ── 3.4 Leakage ────────────────────────
     st.subheader("3.4 Leakage Tespiti (Korelasyon)")
