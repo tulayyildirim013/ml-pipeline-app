@@ -124,58 +124,41 @@ if 'bagimsiz' in st.session_state:
  
 
     # ── 3.4 Leakage ────────────────────────
+# ── 3.4 Leakage ────────────────────────
     st.subheader("3.4 Leakage Tespiti (Korelasyon)")
     esik = st.slider("Korelasyon eşiği", 0.80, 1.00, 0.95, 0.01)
 
-    korelasyon = X.corr().abs()
-    ust_ucgen = korelasyon.where(
-        np.triu(np.ones(korelasyon.shape), k=1).astype(bool)
-    )
-    yuksek_kor = [
-        col for col in ust_ucgen.columns
-        if any(ust_ucgen[col] > esik) and any(ust_ucgen[col] < 1.0)
-    ]
+    corr_matrix = X.corr().abs()
+    
+    # Köşegeni sıfırla (kendisiyle korelasyon = 1.0, bunları alma)
+    np.fill_diagonal(corr_matrix.values, 0)
 
-    if yuksek_kor:
-        st.warning(f"⚠️ {len(yuksek_kor)} sütun yüksek korelasyonlu:")
-        st.write(yuksek_kor)
-    # Korelasyon matrisi
-    if st.checkbox("Korelasyon matrisini göster"):
-        import matplotlib.pyplot as plt
-        import seaborn as sns
-        corr = X.corr().abs()
-        # Eşik üzeri korelasyonlu sütunları bul
-        esik_gorsel = st.slider("Görsel eşik", 0.50, 1.00, 0.70, 0.05, key="gorsel_esik")
-        st.metric(label="Seçilen Eşik", value=f"{esik_gorsel}")
+    # Eşik üzerindeki çiftleri bul
+    yuksek_ciftler = []
+    silinecek = set()
 
-        # Sadece yüksek korelasyonlu sütunları seç
-        # Sadece yüksek korelasyonlu sütunları seç
-    yuksek_sutunlar = corr.columns[
-        (corr > esik_gorsel).any(axis=1) &
-        (corr < 1.0).any(axis=1)
-    ].tolist()
+    for i in range(len(corr_matrix.columns)):
+        for j in range(i+1, len(corr_matrix.columns)):
+            val = corr_matrix.iloc[i, j]
+            if val > esik:
+                col_i = corr_matrix.columns[i]
+                col_j = corr_matrix.columns[j]
+                yuksek_ciftler.append({
+                    "Sütun 1": col_i,
+                    "Sütun 2": col_j,
+                    "Korelasyon": round(val, 4)
+                })
+                silinecek.add(col_j)  # ikinci sütunu sil
 
-    if len(yuksek_sutunlar) > 1:
-        corr_filtre = X[yuksek_sutunlar].corr()
-
-        fig, ax = plt.subplots(figsize=(12, 10))
-        sns.heatmap(
-            corr_filtre,
-            annot=False,
-            fmt=".2f",
-            cmap='coolwarm',
-            ax=ax,
-            vmin=-1,
-            vmax=1,
-            linewidths=0.5
-        )
-        ax.set_title(f"Korelasyon Matrisi (eşik > {esik_gorsel})")
-        plt.xticks(rotation=45, ha='right')
-        plt.tight_layout()
-        st.pyplot(fig)
-        plt.close()
+    if yuksek_ciftler:
+        st.warning(f"⚠️ {len(silinecek)} sütun yüksek korelasyonlu:")
+        st.dataframe(pd.DataFrame(yuksek_ciftler))
+        
+        if st.checkbox("Bu sütunları leakage olarak sil"):
+            X = X.drop(columns=list(silinecek))
+            st.success(f"✅ Silindi. Kalan feature: {X.shape[1]}")
     else:
-        st.info("Bu eşikte gösterilecek sütun yok, eşiği düşür.")
+        st.success(f"✅ Eşik {esik} üzerinde leakage yok")
         # Grafik altına ekle
 st.subheader("İki Sütun Arasındaki Korelasyonu Sorgula")
 
