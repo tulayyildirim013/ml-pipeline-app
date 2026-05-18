@@ -148,15 +148,15 @@ if 'bagimsiz' in st.session_state:
         esik_gorsel = st.slider("Görsel eşik", 0.50, 1.00, 0.70, 0.05, key="gorsel_esik")
 
         # Sadece yüksek korelasyonlu sütunları seç
-        
-         yuksek_sutunlar = corr.columns[
-            (corr > esik_gorsel).any(axis=1) & 
-            (corr < 1.0).any(axis=1)
-        ].tolist()
+        # Sadece yüksek korelasyonlu sütunları seç
+    yuksek_sutunlar = corr.columns[
+        (corr > esik_gorsel).any(axis=1) &
+        (corr < 1.0).any(axis=1)
+    ].tolist()
 
-        if len(yuksek_sutunlar) > 1:
+    if len(yuksek_sutunlar) > 1:
         corr_filtre = X[yuksek_sutunlar].corr()
-        
+
         fig, ax = plt.subplots(figsize=(12, 10))
         sns.heatmap(
             corr_filtre,
@@ -175,6 +175,7 @@ if 'bagimsiz' in st.session_state:
         plt.close()
     else:
         st.info("Bu eşikte gösterilecek sütun yok, eşiği düşür.")
+        
 
           
 
