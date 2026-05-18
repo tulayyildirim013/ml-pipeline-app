@@ -138,6 +138,21 @@ if 'bagimsiz' in st.session_state:
     if yuksek_kor:
         st.warning(f"⚠️ {len(yuksek_kor)} sütun yüksek korelasyonlu:")
         st.write(yuksek_kor)
+    # Korelasyon matrisi
+    if st.checkbox("Korelasyon matrisini göster"):
+        import seaborn as sns
+        fig, ax = plt.subplots(figsize=(12, 10))
+        sns.heatmap(
+            X.corr(),
+            annot=False,
+            cmap='coolwarm',
+            ax=ax,
+            vmin=-1,
+            vmax=1
+        )
+        ax.set_title("Korelasyon Matrisi")
+        st.pyplot(fig)
+        plt.close()
         if st.checkbox("Bu sütunları leakage olarak sil"):
             X = X.drop(columns=yuksek_kor)
             st.success(f"✅ Silindi. Kalan feature: {X.shape[1]}")
