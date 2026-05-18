@@ -141,24 +141,41 @@ if 'bagimsiz' in st.session_state:
         st.write(yuksek_kor)
     # Korelasyon matrisi
     if st.checkbox("Korelasyon matrisini göster"):
+        import matplotlib.pyplot as plt
         import seaborn as sns
+        corr = X.corr().abs()
+        # Eşik üzeri korelasyonlu sütunları bul
+        esik_gorsel = st.slider("Görsel eşik", 0.50, 1.00, 0.70, 0.05, key="gorsel_esik")
+
+        # Sadece yüksek korelasyonlu sütunları seç
+         yuksek_sutunlar = corr.columns[
+        (corr > esik_gorsel).any(axis=1) & 
+        (corr < 1.0).any(axis=1)
+        ].tolist()
+
+        if len(yuksek_sutunlar) > 1:
+        corr_filtre = X[yuksek_sutunlar].corr()
+        
         fig, ax = plt.subplots(figsize=(12, 10))
         sns.heatmap(
-            X.corr(),
-            annot=False,
+            corr_filtre,
+            annot=True,
+            fmt=".2f",
             cmap='coolwarm',
             ax=ax,
             vmin=-1,
-            vmax=1
+            vmax=1,
+            linewidths=0.5
         )
-        ax.set_title("Korelasyon Matrisi")
+        ax.set_title(f"Korelasyon Matrisi (eşik > {esik_gorsel})")
+        plt.xticks(rotation=45, ha='right')
+        plt.tight_layout()
         st.pyplot(fig)
         plt.close()
-        if st.checkbox("Bu sütunları leakage olarak sil"):
-            X = X.drop(columns=yuksek_kor)
-            st.success(f"✅ Silindi. Kalan feature: {X.shape[1]}")
     else:
-        st.success(f"✅ Eşik {esik} üzerinde leakage yok")
+        st.info("Bu eşikte gösterilecek sütun yok, eşiği düşür.")
+
+          
 
     # ── 3.5 Normalizasyon ──────────────────
     st.subheader("3.5 Normalizasyon")
