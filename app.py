@@ -148,9 +148,10 @@ if 'bagimsiz' in st.session_state:
         esik_gorsel = st.slider("Görsel eşik", 0.50, 1.00, 0.70, 0.05, key="gorsel_esik")
 
         # Sadece yüksek korelasyonlu sütunları seç
+        
          yuksek_sutunlar = corr.columns[
-        (corr > esik_gorsel).any(axis=1) & 
-        (corr < 1.0).any(axis=1)
+            (corr > esik_gorsel).any(axis=1) & 
+            (corr < 1.0).any(axis=1)
         ].tolist()
 
         if len(yuksek_sutunlar) > 1:
