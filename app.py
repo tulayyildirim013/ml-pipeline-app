@@ -126,12 +126,12 @@ if 'bagimsiz' in st.session_state:
     # ── 3.4 Leakage ────────────────────────
 # ── 3.4 Leakage ────────────────────────
 st.subheader("3.4 Leakage Tespiti (Korelasyon)")
-    esik = st.slider("Korelasyon eşiği", 0.80, 1.00, 0.95, 0.01)
-    corr_matrix = X.corr().abs()
-    corr_matrix = corr_matrix * (1 - np.eye(len(corr_matrix)))
+esik = st.slider("Korelasyon eşiği", 0.80, 1.00, 0.95, 0.01)
+corr_matrix = X.corr().abs()
+corr_matrix = corr_matrix * (1 - np.eye(len(corr_matrix)))
 
-    yuksek_ciftler = []
-    silinecek = set()
+yuksek_ciftler = []
+silinecek = set()
 
     for i in range(len(corr_matrix.columns)):
         for j in range(i+1, len(corr_matrix.columns)):
