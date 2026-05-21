@@ -125,15 +125,11 @@ if 'bagimsiz' in st.session_state:
 
     # ── 3.4 Leakage ────────────────────────
 # ── 3.4 Leakage ────────────────────────
-    st.subheader("3.4 Leakage Tespiti (Korelasyon)")
+st.subheader("3.4 Leakage Tespiti (Korelasyon)")
     esik = st.slider("Korelasyon eşiği", 0.80, 1.00, 0.95, 0.01)
-
     corr_matrix = X.corr().abs()
-    
-    # Köşegeni sıfırla (kendisiyle korelasyon = 1.0, bunları alma)
     corr_matrix = corr_matrix * (1 - np.eye(len(corr_matrix)))
 
-    # Eşik üzerindeki çiftleri bul
     yuksek_ciftler = []
     silinecek = set()
 
@@ -148,43 +144,38 @@ if 'bagimsiz' in st.session_state:
                     "Sütun 2": col_j,
                     "Korelasyon": round(val, 4)
                 })
-                silinecek.add(col_j)  # ikinci sütunu sil
+                silinecek.add(col_j)
 
     if yuksek_ciftler:
         st.warning(f"⚠️ {len(silinecek)} sütun yüksek korelasyonlu:")
         st.dataframe(pd.DataFrame(yuksek_ciftler))
-        
         if st.checkbox("Bu sütunları leakage olarak sil"):
             X = X.drop(columns=list(silinecek))
             st.success(f"✅ Silindi. Kalan feature: {X.shape[1]}")
     else:
         st.success(f"✅ Eşik {esik} üzerinde leakage yok")
-        # Grafik altına ekle
-st.subheader("İki Sütun Arasındaki Korelasyonu Sorgula")
 
-col1, col2 = st.columns(2)
-with col1:
-    sutun1 = st.selectbox("1. Sütun", options=X_kor.columns.tolist(), key="kor_s1")
-with col2:
-    sutun2 = st.selectbox("2. Sütun", options=X_kor.columns.tolist(), key="kor_s2")
-    
-if sutun1 != sutun2:
-    deger = X[sutun1].corr(X[sutun2])
-    deger_abs = abs(deger)
+    # Korelasyon sorgula
+    st.subheader("İki Sütun Arasındaki Korelasyonu Sorgula")
+    col1, col2 = st.columns(2)
+    with col1:
+        sutun1 = st.selectbox("1. Sütun", options=X.columns.tolist(), key="kor_s1")
+    with col2:
+        sutun2 = st.selectbox("2. Sütun", options=X.columns.tolist(), key="kor_s2")
 
-    if deger_abs > 0.90:
-        yorum = "🔴 Çok yüksek korelasyon — Leakage riski var!"
-    elif deger_abs > 0.70:
-        yorum = "🟠 Yüksek korelasyon — Dikkat et"
-    elif deger_abs > 0.50:
-        yorum = "🟡 Orta korelasyon — Normal"
-    else:
-        yorum = "🟢 Düşük korelasyon — Sorun yok"
-
-    st.metric(label=f"{sutun1} ↔ {sutun2}", value=f"{deger:.4f}")
-    st.info(yorum)
-
-          
+    if sutun1 != sutun2:
+        deger = X[sutun1].corr(X[sutun2])
+        deger_abs = abs(deger)
+        if deger_abs > 0.90:
+            yorum = "🔴 Çok yüksek korelasyon — Leakage riski var!"
+        elif deger_abs > 0.70:
+            yorum = "🟠 Yüksek korelasyon — Dikkat et"
+        elif deger_abs > 0.50:
+            yorum = "🟡 Orta korelasyon — Normal"
+        else:
+            yorum = "🟢 Düşük korelasyon — Sorun yok"
+        st.metric(label=f"{sutun1} ↔ {sutun2}", value=f"{deger:.4f}")
+        st.info(yorum)
 
     # ── 3.5 Normalizasyon ──────────────────
     st.subheader("3.5 Normalizasyon")
