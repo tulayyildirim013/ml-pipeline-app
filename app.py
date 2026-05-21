@@ -164,10 +164,10 @@ st.subheader("İki Sütun Arasındaki Korelasyonu Sorgula")
 
 col1, col2 = st.columns(2)
 with col1:
-    sutun1 = st.selectbox("1. Sütun", options=X.columns.tolist(), key="kor_s1")
+    sutun1 = st.selectbox("1. Sütun", options=X_kor.columns.tolist(), key="kor_s1")
 with col2:
-    sutun2 = st.selectbox("2. Sütun", options=X.columns.tolist(), key="kor_s2")
-
+    sutun2 = st.selectbox("2. Sütun", options=X_kor.columns.tolist(), key="kor_s2")
+    
 if sutun1 != sutun2:
     deger = X[sutun1].corr(X[sutun2])
     deger_abs = abs(deger)
