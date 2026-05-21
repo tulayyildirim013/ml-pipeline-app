@@ -125,14 +125,12 @@ if 'bagimsiz' in st.session_state:
 
     # ── 3.4 Leakage ────────────────────────
 # ── 3.4 Leakage ────────────────────────
-st.subheader("3.4 Leakage Tespiti (Korelasyon)")
-esik = st.slider("Korelasyon eşiği", 0.80, 1.00, 0.95, 0.01)
-corr_matrix = X.corr().abs()
-corr_matrix = corr_matrix * (1 - np.eye(len(corr_matrix)))
-
-yuksek_ciftler = []
-silinecek = set()
-
+    st.subheader("3.4 Leakage Tespiti (Korelasyon)")
+    esik = st.slider("Korelasyon eşiği", 0.80, 1.00, 0.95, 0.01)
+    corr_matrix = X.corr().abs()
+    corr_matrix = corr_matrix * (1 - np.eye(len(corr_matrix)))
+    yuksek_ciftler = []
+    silinecek = set()
     for i in range(len(corr_matrix.columns)):
         for j in range(i+1, len(corr_matrix.columns)):
             val = corr_matrix.iloc[i, j]
@@ -145,7 +143,6 @@ silinecek = set()
                     "Korelasyon": round(val, 4)
                 })
                 silinecek.add(col_j)
-
     if yuksek_ciftler:
         st.warning(f"⚠️ {len(silinecek)} sütun yüksek korelasyonlu:")
         st.dataframe(pd.DataFrame(yuksek_ciftler))
@@ -154,15 +151,12 @@ silinecek = set()
             st.success(f"✅ Silindi. Kalan feature: {X.shape[1]}")
     else:
         st.success(f"✅ Eşik {esik} üzerinde leakage yok")
-
-    # Korelasyon sorgula
     st.subheader("İki Sütun Arasındaki Korelasyonu Sorgula")
     col1, col2 = st.columns(2)
     with col1:
         sutun1 = st.selectbox("1. Sütun", options=X.columns.tolist(), key="kor_s1")
     with col2:
         sutun2 = st.selectbox("2. Sütun", options=X.columns.tolist(), key="kor_s2")
-
     if sutun1 != sutun2:
         deger = X[sutun1].corr(X[sutun2])
         deger_abs = abs(deger)
