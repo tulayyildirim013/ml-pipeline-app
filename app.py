@@ -312,7 +312,10 @@ if 'egitilmis_modeller' in st.session_state:
 
     import shap
     import matplotlib.pyplot as plt
-
+    from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor, ExtraTreesRegressor
+    from xgboost import XGBRegressor
+    from lightgbm import LGBMRegressor
+    
     egitilmis_modeller = st.session_state['egitilmis_modeller']
     X_test             = st.session_state['X_test']
     X_train            = st.session_state['X_train']
@@ -327,9 +330,17 @@ if 'egitilmis_modeller' in st.session_state:
 
         st.info("⏳ SHAP hesaplanıyor...")
 
-        # SHAP explainer
-        explainer   = shap.TreeExplainer(model)
-        shap_values = explainer.shap_values(X_test)
+ 
+
+     tree_modeller = (RandomForestRegressor, GradientBoostingRegressor, 
+                 ExtraTreesRegressor, XGBRegressor, LGBMRegressor)
+
+     if isinstance(model, tree_modeller):
+         explainer   = shap.TreeExplainer(model)
+         shap_values = explainer.shap_values(X_test)
+     else:
+         explainer   = shap.LinearExplainer(model, X_train)
+         shap_values = explainer.shap_values(X_test)
 
         # ── 5.1 SHAP Summary Plot ──
         st.subheader(f"5.1 SHAP Summary — {hedef_sec}")
